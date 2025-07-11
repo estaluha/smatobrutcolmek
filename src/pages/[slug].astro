@@ -188,6 +188,10 @@ const schemaWebPage = {
   "url": `${url}/${slugify(video.title)}-${video.id}/`,
   "name": `${video.title}`,
   "description": `Nonton streaming video bokep viral ${video.title} yang terbaru di link ${nama} kategori ${video.category}.`,
+  "image": {
+    "@type": "ImageObject",
+    "url": video.thumbnail
+  },
   "publisher": {
     "@type": "Organization",
     "name": nama,

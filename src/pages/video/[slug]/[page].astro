@@ -182,7 +182,20 @@ function capitalizeWords(str: string): string {
 const displayQuery = capitalizeWords(originalQuery);
 const currentUrl = new URL(Astro.url.pathname, url).href;
 
+let ogImageForSearchPage = new URL('/logo.png', url).href;
 
+const firstValidPaginatedThumbnail = paginatedResults.find(video =>
+  video.thumbnail && !video.thumbnail.includes('placeholder.webp')
+);
+
+if (firstValidPaginatedThumbnail && firstValidPaginatedThumbnail.thumbnail) {
+  try {
+    new URL(firstValidPaginatedThumbnail.thumbnail);
+    ogImageForSearchPage = firstValidPaginatedThumbnail.thumbnail;
+  } catch (e) {
+    console.warn(`[WARNING] Thumbnail URL dari hasil pencarian terpaginasi tidak valid atau adalah placeholder, mencoba random posts. Video ID: ${firstValidPaginatedThumbnail.id || 'Unknown'}`);
+  }
+}
 const breadcrumbs = [
   { name: 'Home', url: `${url}` },
   { name: `Pencarian: ${displayQuery}`, url: null },
@@ -205,6 +218,10 @@ const schemaSearchResultsPage = {
   "url": currentUrl,
   "name": `Video untuk ${displayQuery} | Halaman ${currentPage} - ${nama}`,
   "description": `Menampilkan video yang relevan dengan '${displayQuery}'. Halaman ${currentPage} dari ${totalPages} hasil di ${nama}.`,
+  "image": {
+    "@type": "ImageObject",
+    "url": ogImageForSearchPage
+  },
   "mainEntityOfPage": {
     "@type": "WebPage",
     "@id": currentUrl
@@ -242,9 +259,10 @@ const nextPageUrl = currentPage < totalPages ? `${baseSearchUrl}/${currentPage +
 <Layout
   title={`${displayQuery} di ${nama} | Page ${currentPage}`}
   description={`${displayQuery} ${desk} di ${nama}. Page ${currentPage}.`}
+  ogImage={ogImageForSearchPage}
   preconnectDomains={preconnectDomains}
-  schemaJsonLd={pageSchemas} // Mengirim schema ke Layout
-  siteUrl={url} // Pastikan ini juga ada jika digunakan di Layout
+  schemaJsonLd={pageSchemas}
+  siteUrl={url}
   keywords={pageKeywords}
 >
   {prevPageUrl && <link rel="prev" href={prevPageUrl} />}

@@ -10,7 +10,13 @@ const allVideos: VideoData[] = await getAllVideos();
 
 const categoryData: { [key: string]: { count: number; thumbnails: string[]; } } = {};
 const allThumbnailDomains = new Set<string>();
+
 allVideos.forEach(video => {
+  if (typeof video.category !== 'string' || video.category.trim() === '') {
+    console.warn(`[WARNING] Melewatkan video ID ${video.id || 'Unknown'} karena kategori tidak valid atau kosong: '${video.category}' di halaman kategori index.`);
+    return;
+  }
+
   if (!categoryData[video.category]) {
     categoryData[video.category] = {
       count: 0,
@@ -20,11 +26,12 @@ allVideos.forEach(video => {
   categoryData[video.category].count++;
 
   if (video.thumbnail) {
-    categoryData[video.category].thumbnails.push(video.thumbnail);
     try {
-        allThumbnailDomains.add(new URL(video.thumbnail).origin);
+      new URL(video.thumbnail);
+      categoryData[video.category].thumbnails.push(video.thumbnail);
+      allThumbnailDomains.add(new URL(video.thumbnail).origin);
     } catch (e) {
-        console.error(`[ERROR] Invalid thumbnail URL for video ID ${video.id} in category data collection:`, e);
+      console.error(`[ERROR] Invalid thumbnail URL for video ID ${video.id || 'Unknown'} in category data collection:`, e);
     }
   }
 });
@@ -48,6 +55,21 @@ const categories = Object.keys(categoryData)
   })
   .sort((a, b) => a.name.localeCompare(b.name));
 
+let ogImageForCategoryPage = new URL('/logo.png', url).href;
+
+if (categories.length > 0) {
+  const categoryWithValidThumbnail = categories.find(cat =>
+    cat.thumbnail && !cat.thumbnail.includes('placeholder.webp')
+  );
+  if (categoryWithValidThumbnail && categoryWithValidThumbnail.thumbnail) {
+    try {
+      new URL(categoryWithValidThumbnail.thumbnail);
+      ogImageForCategoryPage = categoryWithValidThumbnail.thumbnail;
+    } catch (e) {
+      console.warn(`[WARNING] URL thumbnail untuk kategori ${categoryWithValidThumbnail.name} tidak valid atau adalah placeholder, menggunakan logo.png.`, e);
+    }
+  }
+}
 
 const breadcrumbs = [
   { name: 'Home', url: `${url}` },
@@ -69,8 +91,12 @@ const schemaWebPage = {
   "@context": "https://schema.org",
   "@type": "WebPage",
   "url": `${url}/category/`,
-  "name": `Daftar Kategori Video - ${nama}`,
   "description": `Jelajahi berbagai kategori video ${nama} terlengkap. Temukan video berdasarkan ${categories.slice(0, 3).map(cat => cat.name).join(', ')}${categories.length > 3 ? ', dan banyak kategori lainnya' : ''}.`,
+  "name": `Daftar Kategori Video - ${nama}`,
+    "image": {
+    "@type": "ImageObject",
+    "url": ogImageForCategoryPage
+  },
   "publisher": {
     "@type": "Organization",
     "name": nama,
@@ -86,7 +112,6 @@ const schemaWebPage = {
   }
 };
 
-// Buat string keywords yang relevan untuk halaman kategori
 const pageKeywords = `kategori video, daftar kategori, ${nama} kategori, nonton video gratis, ${categories.map(cat => cat.name).join(', ')}`;
 
 ---
@@ -96,7 +121,10 @@ const pageKeywords = `kategori video, daftar kategori, ${nama} kategori, nonton 
   description={`Jelajahi berbagai kategori video ${nama} terlengkap. Temukan video berdasarkan ${categories.slice(0, 3).map(cat => cat.name).join(', ')}${categories.length > 3 ? ', dan banyak kategori lainnya' : ''}. Nonton online gratis sekarang!`}
   siteName={nama}
   siteUrl={url}
-  preconnectDomains={Array.from(allThumbnailDomains)} keywords={pageKeywords} >
+  ogImage={ogImageForCategoryPage}
+  preconnectDomains={Array.from(allThumbnailDomains)}
+  keywords={pageKeywords}
+>
   <script type="application/ld+json" set:html={JSON.stringify(schemaBreadcrumb)} />
   <script type="application/ld+json" set:html={JSON.stringify(schemaWebPage)} />
 

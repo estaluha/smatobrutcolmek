@@ -15,6 +15,11 @@ export async function getStaticPaths() {
   const categories: { [key: string]: VideoData[] } = {};
 
   allVideos.forEach(video => {
+    if (typeof video.category !== 'string' || video.category.trim() === '') {
+      console.warn(`[WARNING] Melewatkan video ID ${video.id || 'Unknown'} karena kategori tidak valid atau kosong: '${video.category}' di getStaticPaths (category/[slug]/[page]).`);
+      return;
+    }
+
     if (!categories[video.category]) {
       categories[video.category] = [];
     }
@@ -52,11 +57,11 @@ export async function getStaticPaths() {
       const preconnectDomainsForPage = new Set<string>();
       paginatedVideosForPage.forEach(video => {
         try {
-          if (video.thumbnail) {
+          if (video.thumbnail && !video.thumbnail.includes('placeholder.webp')) {
             preconnectDomainsForPage.add(new URL(video.thumbnail).origin);
           }
         } catch (e) {
-          console.error(`URL tidak valid untuk video ID "${video.id}" di kategori "${video.category}" (paginasi kategori):`, e);
+          console.error(`URL tidak valid untuk video ID "${video.id || 'Unknown'}" di kategori "${video.category}" (paginasi kategori):`, e);
         }
       });
 
@@ -80,9 +85,24 @@ export async function getStaticPaths() {
 
 const { categoryName, currentPage, totalPages, videos: paginatedVideos, preconnectDomains } = Astro.props;
 
-const currentUrl = new URL(Astro.url.pathname, url).href; // Get absolute URL for canonical
+const currentUrl = new URL(Astro.url.pathname, url).href;
 const prevPageUrl = currentPage > 1 ? `${url}/category/${slugify(categoryName)}/${currentPage - 1}` : null;
 const nextPageUrl = currentPage < totalPages ? `${url}/category/${slugify(categoryName)}/${currentPage + 1}` : null;
+
+let ogImageForCategoryPage = new URL('/logo.png', url).href;
+
+const firstValidVideoThumbnail = paginatedVideos.find(video =>
+  video.thumbnail && !video.thumbnail.includes('placeholder.webp')
+);
+
+if (firstValidVideoThumbnail && firstValidVideoThumbnail.thumbnail) {
+  try {
+    new URL(firstValidVideoThumbnail.thumbnail);
+    ogImageForCategoryPage = firstValidVideoThumbnail.thumbnail;
+  } catch (e) {
+    console.warn(`[WARNING] URL thumbnail untuk video pertama di kategori ${categoryName} (halaman ${currentPage}) tidak valid atau adalah placeholder, menggunakan logo.png. Video ID: ${firstValidVideoThumbnail.id || 'Unknown'}`);
+  }
+}
 
 const breadcrumbs = [
   { name: 'Home', url: `${url}` },
@@ -107,6 +127,10 @@ const schemaCollectionPage = {
   "url": currentUrl,
   "name": `Video ${categoryName} - Halaman ${currentPage} - ${nama}`,
   "description": `Temukan koleksi video ${categoryName} terbaru dan terlengkap. Halaman ${currentPage} dari ${totalPages} di ${nama}. Nonton online gratis.`,
+  "image": {
+    "@type": "ImageObject",
+    "url": ogImageForCategoryPage
+  },
   "mainEntityOfPage": {
     "@type": "WebPage",
     "@id": currentUrl
@@ -145,6 +169,7 @@ const pageKeywords = `${categoryName}, video ${categoryName}, nonton ${categoryN
   description={`Nonton video ${categoryName} terlengkap di ${nama}. Halaman ${currentPage} dari ${totalPages}. Kumpulan video berkualitas tinggi, update rutin, dan gratis!`}
   preconnectDomains={preconnectDomains}
   siteUrl={url}
+  ogImage={ogImageForCategoryPage}
   keywords={pageKeywords}
   schemaJsonLd={pageSchemas}
 >

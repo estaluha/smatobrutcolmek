@@ -113,12 +113,31 @@ const pageTitle = `${siteName} - Video Bokep Indo Viral Terbaru`;
 const pageDescription = `Nonton video streaming ${siteName} terbaru dan terlengkap gratis. Temukan koleksi video seperti ${sortedCategories.slice(0, 3).join(', ')}${sortedCategories.length > 3 ? ', dan banyak lagi' : ''}.`;
 const pageKeywords = `${siteName}, nonton bokep, video streaming, bokep indo, bokep jepang, bokep jav, bokep barat, video viral, simontok, ${sortedCategories.slice(0, 5).join(', ')}, download bokep`;
 
+let ogImageForHomePage = new URL('/logo.png', url).href;
+
+const firstValidRandomThumbnail = randomVideos.find(video =>
+  video.thumbnail && !video.thumbnail.includes('placeholder.webp')
+);
+
+if (firstValidRandomThumbnail && firstValidRandomThumbnail.thumbnail) {
+  try {
+    new URL(firstValidRandomThumbnail.thumbnail);
+    ogImageForHomePage = firstValidRandomThumbnail.thumbnail;
+  } catch (e) {
+    console.warn(`[WARNING] Thumbnail URL dari 'Video Pilihan Kami' tidak valid atau adalah placeholder, mencoba kategori. Video ID: ${firstValidRandomThumbnail.id || 'Unknown'}`);
+  }
+}
+
 const schemaWebPage = {
   "@context": "https://schema.org",
   "@type": "WebPage",
   "url": currentUrl,
   "name": pageTitle,
   "description": pageDescription,
+  "image": {
+    "@type": "ImageObject",
+    "url": ogImageForHomePage
+  },
   "publisher": {
     "@type": "Organization",
     "name": siteName,
@@ -152,6 +171,7 @@ const schemaBreadcrumb = {
   title={pageTitle}
   description={pageDescription}
   siteName={siteName}
+  ogImage={ogImageForHomePage}
   preconnectDomains={finalPreconnectDomains}
   siteUrl={currentUrl}
   keywords={pageKeywords}
