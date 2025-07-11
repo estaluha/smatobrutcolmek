@@ -1,2 +1,1 @@
-# smatobrutcolmek
-smatobrutcolmek
+# [smatobrutcolmek](https://smatobrutcolmek.pages.dev)
